@@ -176,7 +176,7 @@ public:
 
 int InitRandSeed(int argc, const char* argv[]) {
     int rand_seed;
-    if (argc >= 2) {
+    if (argc >= 3) {
         rand_seed = atoi(argv[1]);
     } else {
         rand_seed = time(nullptr);
@@ -385,7 +385,7 @@ public:
                 }
                 break;
             } else {
-                if (double(rand()) / RAND_MAX >  (exp( -1. / k_ / t))){
+                if (double(rand()) / RAND_MAX >  (exp( -1. / k_ * t))){
                     rand_vertex = rand() % friends.size();
                     path.insert(path.begin() + friends[rand_vertex].second, friends[rand_vertex].first);
                 } else {
@@ -463,10 +463,9 @@ void TrySolver(const VertexCoverSolver& solver, const Graph& graph) {
 
 int main(int argc, const char* argv[]) {
     std::cout << "Using rand seed: " << InitRandSeed(argc, argv) << "\n";
-    
-    const auto graph = RandomGraph(7, 0.5);
+    const auto graph = RandomGraph(atoi(argv[1]), 0.5);
     GradientDescent gradient_descent;
-    Metropolis metropolis(1, 100, true);
+    Metropolis metropolis(1, 100, false);
     TrySolver(gradient_descent, graph);
     TrySolver(metropolis, graph);
     
