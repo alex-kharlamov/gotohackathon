@@ -210,8 +210,7 @@ class GradientDescent final : public VertexCoverSolver {
         return flag;
     }
     
-    VertexCover Solve(const Graph& graph, DebugInfo& debug_info) const {
-        
+    VertexCover Solve(const Graph& graph, DebugInfo& debug_info) const { 
         int rand_vertex = rand() % graph.AllVertices().size();
         VertexCover S(graph);
         Graph::Vertex begin, end;
@@ -250,21 +249,16 @@ class GradientDescent final : public VertexCoverSolver {
             for (int i = 0; i < path.size() - 1; ++i) {
                 Graph::VertexSet first_ver = graph.AdjacentVertices(path[i]);
                 Graph::VertexSet second_ver = graph.AdjacentVertices(path[i + 1]);
-                
                 Graph::VertexSet intersection;
                 unordered_set_intersection(first_ver.begin(), first_ver.end(),
                                            second_ver.begin(), second_ver.end(),
                                             inserter(intersection, intersection.begin()));
-                
-                for (auto elem : intersection ){
+                for (auto elem : intersection) {
                     if (checker(path, elem)) {
                     friends.push_back(std::make_pair(elem, i));
                     }
                 }
-                
-                
             }
-            
             if (friends.size() == 0) {
                 for (auto elem : path){
                     S.Add(elem);
@@ -280,6 +274,18 @@ class GradientDescent final : public VertexCoverSolver {
 };
 
 class Metropolis final: public VertexCoverSolver {
+
+    bool checker(const std::vector<Graph::Vertex>& vertexset, Graph::Vertex& elem_to_check) const {
+        bool flag = false;
+        for (auto elem : vertexset) {
+            if (elem == elem_to_check) {
+                flag = true;
+                break;
+            }
+        }
+        
+        return flag;
+    }
     
     
 public:
@@ -288,32 +294,72 @@ public:
     }
     
     VertexCover Solve(const Graph& graph, DebugInfo& debug_info) const {
-        // TODO: remove implementation
+
         double t = t_;
-        VertexCover vertex_cover(graph);
-        debug_info.costs.emplace_back(vertex_cover.Cost());
-        for (size_t i = 0; i < iterations_; ++i) {
-            const auto remove_candidates = vertex_cover.CandidatesToRemove();
-            const auto add_candidates = vertex_cover.CandidatesToAdd();
-            
-            const bool do_remove =
-            rand() % (remove_candidates.size() + add_candidates.size()) <
-            remove_candidates.size();
-            if (do_remove) {
-                auto random_candidate = remove_candidates.begin();
-                std::advance(random_candidate, rand() % remove_candidates.size());
-                vertex_cover.Remove(*random_candidate);
-            } else if (double(rand()) / RAND_MAX <= exp(-1. / k_ / t)) {
-                auto random_candidate = add_candidates.begin();
-                std::advance(random_candidate, rand() % add_candidates.size());
-                vertex_cover.Add(*random_candidate);
+        int rand_vertex = rand() % graph.AllVertices().size();
+        VertexCover S(graph);
+        Graph::Vertex begin, end;
+        
+        auto vertex = graph.AllVertices().begin();
+        
+        int i = 0;
+        
+        for (auto elem : graph.AllVertices()){
+            if (i == rand_vertex) {
+                begin = elem;
             }
-            debug_info.costs.emplace_back(vertex_cover.Cost());
+            i++;
+        }
+        
+        rand_vertex = rand() % graph.AdjacentVertices(begin).size();
+        
+        vertex = graph.AllVertices().begin();
+        
+        i = 0;
+        
+        for (auto elem : graph.AdjacentVertices(begin)){
+            if (i == rand_vertex) {
+                end = elem;
+            }
+            i++;
+        }
+        
+        std::vector<Graph::Vertex> path;
+        path.push_back(begin);
+        path.push_back(end);
+        
+        while (true) {
+            std::vector<std::pair<Graph::Vertex, int>> friends;
+            
+            for (int i = 0; i < path.size() - 1; ++i) {
+                Graph::VertexSet first_ver = graph.AdjacentVertices(path[i]);
+                Graph::VertexSet second_ver = graph.AdjacentVertices(path[i + 1]);
+                Graph::VertexSet intersection;
+                unordered_set_intersection(first_ver.begin(), first_ver.end(),
+                                           second_ver.begin(), second_ver.end(),
+                                            inserter(intersection, intersection.begin()));
+                for (auto elem : intersection) {
+                    if (checker(path, elem)) {
+                    friends.push_back(std::make_pair(elem, i));
+                    }
+                }
+            }
+            if (friends.size() == 0) {
+                for (auto elem : path){
+                    S.Add(elem);
+                }
+                break;
+            } else {
+                if (double(rand()) / RAND_MAX <=  (1 - exp(-1. / k_ / t))){
+                    rand_vertex = rand() % friends.size();
+                    path.insert(path.begin() + rand_vertex, friends[rand_vertex].first);
+                }
+            }
             if (annealing_) {
                 t /= 2;
             }
         }
-        return vertex_cover;
+        return S;
     }
     
 private:
@@ -373,7 +419,7 @@ int main(int argc, const char* argv[]) {
     GradientDescent gradient_descent;
     Metropolis metropolis(1, 100, true);
     TrySolver(gradient_descent, graph);
-    //TrySolver(metropolis, graph);
+    TrySolver(metropolis, graph);
     
     return 0;
 }
